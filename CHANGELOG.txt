@@ -2,6 +2,10 @@
 version 3.17
 ~~~~~~~~~~~~~~~~
 
+* fix cert attack output so encoded_attack.crt contains plain base64 text
+* fix custom shellcode hta and ms modifiers so they generate the intended attack files
+* return a non-zero exit code for invalid argument combinations
+* remove unused obfuscation variables surfaced by static analysis
 * fix Python 3.12+ invalid escape warnings in custom PowerShell script detection
 * remove generated PowerShell Add-Type result replacement that caused runtime errors
 * add regression tests for latest GitHub issue and PR reports
